@@ -1,4 +1,4 @@
-import * as THREE from './js/build/three.module.js';
+import * as THREE from '../node_modules/three/build/three.module.js';
 
 const vertexShader = () => {
   return `
@@ -14,7 +14,7 @@ const vertexShader = () => {
 };
 const fragmentShader = () => {
   return `
-    #define M_PI 3.1415926535897932384626433832795;
+    #define M_PI 3.1415926535897932384626433832795
     uniform sampler2D texture1;
     uniform vec2 uResolution;
     uniform float theta;
@@ -22,11 +22,15 @@ const fragmentShader = () => {
 
     float rsB(float psi, float b){
       float temp = (1. - cos(psi)) / (1. + cos(psi));
-      return pow(pow(temp, 2.) + pow(b / sin(psi), 2.), .5) - temp; 
+      float temp1 = b / sin(psi);
+      return pow(temp*temp + temp1*temp1, .5) - temp; 
     }
 
     float rsBeloborodov(float varphi, float b, float theta){
-      float psi = acos(-((sin(theta)*tan(varphi)) / (pow(pow(cos(theta), 2.) + pow(tan(varphi), 2.), .5))));
+      float costheta = cos(theta);
+      float tanvarphi = tan(varphi);
+      float psi = acos(-((sin(theta)*tan(varphi)) / 
+            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
       return rsB(psi, b);
     }
 
@@ -52,8 +56,11 @@ const fragmentShader = () => {
     }
 
     float rsBetterborodov(float varphi, float b, float theta, float n){
-        float psi = acos(-((sin(theta)*tan(varphi)) / (pow(pow(cos(theta), 2.) + pow(tan(varphi), 2.), .5))));
-        return rsB1(3.14159*n + psi, b);
+      float costheta = cos(theta);
+      float tanvarphi = tan(varphi);
+      float psi = acos(-((sin(theta)*tan(varphi)) / 
+            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
+      return rsB1(M_PI*n + psi, b);
     }
 
     float psit2(float b){
@@ -67,15 +74,15 @@ const fragmentShader = () => {
         return rsB1(psi, b);
       } else if (tempb > 27.){
         float temppsit2 = psit2(b);
-        if (psi < 3.14159){
+        if (psi < M_PI){
           return rsB(psi, b);
-        } else if (psi < 2.*temppsit2 - 3.1415){
+        } else if (psi < 2.*temppsit2 - M_PI){
           return tempb / 8.;
         } else {
-          return rsB(psi + 2.*(3.14159 - temppsit2), b);
+          return rsB(psi + 2.*(M_PI- temppsit2), b);
         }
       } else {
-        if (psi < 3.1415) {
+        if (psi < M_PI) {
           return rsB(psi, b);
         } else {
           return tempb / 8.;
@@ -84,8 +91,11 @@ const fragmentShader = () => {
     }
 
     float rsBetterborodovV2(float varphi, float b, float theta, float n){
-      float psi = acos(-((sin(theta)*tan(varphi)) / (pow(pow(cos(theta), 2.) + pow(tan(varphi), 2.), .5))));
-      return rsB2(3.14159*n + psi, b);
+      float costheta = cos(theta);
+      float tanvarphi = tan(varphi);
+      float psi = acos(-((sin(theta)*tan(varphi)) / 
+            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
+      return rsB2(M_PI*n + psi, b);
     }
 
     float lambda(float alpha, float theta) {
@@ -101,7 +111,7 @@ const fragmentShader = () => {
     vec3 colorFunc(float rs, float scale){
       float ans = 0.0;
       float rs_new = rs/scale;
-      if (rs < 4.0 || rs > 15.0){
+      if (rs < 2.0 || rs > 10.0){
         ans = 0.;
       } else {
         ans = rs_new;
@@ -121,16 +131,12 @@ const fragmentShader = () => {
 
       if(u < 0.){
         if(v < 0.){
-          phi -= 3.14159;
+          phi -= M_PI;
         } else {
-          phi += 3.14159;
-        }
-      } else {
-        if(v < 0.){
-          phi += 2.*3.14159;
+          phi += M_PI;
         }
       }
-      
+
       
       vec2 uv2 = (color.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
       vec2 uv2prime = (colorprime.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
@@ -160,15 +166,11 @@ var camera = new THREE.PerspectiveCamera(
 
 //SCENE
 var scene = new THREE.Scene();
-//LIGHTS
-var light = new THREE.AmbientLight(0xffffff, 0.5);
-
 
 //SCREEN
-var geometry = new THREE.BoxGeometry(1,1,1);
+var geometry = new THREE.PlaneGeometry(2, 2, 1);
 
-var texture = new THREE.TextureLoader().load('public/space.png')
-var reflective_material = new THREE.MeshBasicMaterial({ map: texture});
+var texture = new THREE.TextureLoader().load('../static/space.png')
 var uniforms = {
   theta : {value: 0},
   texture1: {value:texture},
@@ -181,6 +183,7 @@ var shader_material = new THREE.ShaderMaterial({
   vertexShader: vertexShader(),
   fragmentShader: fragmentShader(),
 });
+var reflective_material = new THREE.MeshBasicMaterial(0x00ff00);
 var mesh = new THREE.Mesh(geometry, shader_material);
 
 mesh.position.z = -1;
