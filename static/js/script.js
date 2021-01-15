@@ -35,9 +35,26 @@ const fragmentShader = () => {
     }
 
     float rt(float b){
-      float p = -b*b, q = 2.*b*b;
-      float C = pow(-q/2. + pow(q*q/4. + p*p*p/27., 0.5), 1./3.);
-      return C-p/(3.*C);
+      float Q, A, D, v, l, k = -1.; 
+      float B = -b*b, c = 2.*b*b;
+
+      float p = ( 3.*c - B*B ) / 3.,
+            q = ( 9.*B*c - 2.*B*B*B) / 27., // -
+            r = q/2.; Q = p/3.;
+            D = Q*Q*Q + r*r;    
+
+      if ( D < 0.) {                            // --- if 3 sol
+        A = acos(r/sqrt(-Q*Q*Q)), k = round(1.5-A/6.283); // k = 0,1,2 ; we want min l
+#define sol(k) ( 2.*sqrt(-Q)* cos((A+(k)*6.283)/3.) - b/3. )
+        l = sol(k);
+      }
+      else                                        // --- if 1 sol
+        if (p>0.) v = -2.*sqrt(p/3.), 
+#define asinh(z) ( sign(z)*asinh(abs(z)) )      // fix asinh() symetry error 
+                  l = -v* sinh(asinh(3.*-q/p/v)/3.) -b/3.; 
+        else      v = -2.*sqrt(-p/3.), 
+                  l = sign(-q)*v* cosh(acosh(3.*abs(q)/p/v)/3.) -b/3.;
+      return l;
     }
 
     float psit(float b){return acos(-2. / (rt(b) - 2.));}
@@ -45,13 +62,13 @@ const fragmentShader = () => {
     float rsB1(float psi, float b){
       if(b*b >= 32.){
         float temp = psit(b);
-        if(psi > 2.*temp){
+        if(psi >= 2.*temp){
           return 1000.;
         } else {
           return rsB(temp - abs(temp - psi), b);
         }
       } else {
-        return rsB(psi, b);
+       return rsB(psi, b);
       }
     }
 
@@ -111,7 +128,7 @@ const fragmentShader = () => {
     vec3 colorFunc(float rs, float scale){
       float ans = 0.0;
       float rs_new = rs/scale;
-      if (rs < 2.0 || rs > 10.0){
+      if (rs < 2. || rs > 10.0){
         ans = 0.;
       } else {
         ans = rs_new;
@@ -123,7 +140,7 @@ const fragmentShader = () => {
       vec2 uv = 30.0 * (gl_FragCoord.xy - 0.5*uResolution.xy) / uResolution.y; 
       float u = uv.x;
       float v = uv.y;
-      float rs = rsBetterborodovV2(asin(v/distance(uv,vec2(0.0))), distance(uv,vec2(0.0)), theta, 0.);
+      float rs = rsBetterborodovV2(asin(v/distance(uv,vec2(0.0))), distance(uv,vec2(0.0)), theta, .0);
       float rs2 = rsBetterborodovV2(asin(v/distance(uv,vec2(0.0))), distance(uv,vec2(0.0)), theta, 1.);
       vec3 color = colorFunc(rs, 30.);
       vec3 colorprime = colorFunc(rs2, 30.);
@@ -138,12 +155,12 @@ const fragmentShader = () => {
       }
 
       
-      vec2 uv2 = (color.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
+      vec2 uv2 = (color.x)*vec2(cos(phi),sin(phi)) + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
       vec2 uv2prime = (colorprime.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
 
       vec4 color1 = texture2D(texture1, uv2);
       vec4 colorprime1 = texture2D(texture1, uv2prime);
-      gl_FragColor = colorprime1 + 2.*color1;//vec4(color, 1.0);
+      gl_FragColor = colorprime1 + 2.*color1;
     }
   `
 };
@@ -186,7 +203,7 @@ var shader_material = new THREE.ShaderMaterial({
 var reflective_material = new THREE.MeshBasicMaterial(0x00ff00);
 var mesh = new THREE.Mesh(geometry, shader_material);
 
-mesh.position.z = -1;
+mesh.position.z = -2;
 scene.add(mesh);
 
 //RENDERER
