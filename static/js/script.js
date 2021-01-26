@@ -35,6 +35,7 @@ const fragmentShader = () => {
     }
 
     float rt(float b){
+      //taken from https://www.shadertoy.com/view/3d23Dc
       float Q, A, D, v, l, k = -1.; 
       float B = -b*b, c = 2.*b*b;
 
@@ -54,7 +55,7 @@ const fragmentShader = () => {
                   l = -v* sinh(asinh(3.*-q/p/v)/3.) -b/3.; 
         else      v = -2.*sqrt(-p/3.), 
                   l = sign(-q)*v* cosh(acosh(3.*abs(q)/p/v)/3.) -b/3.;
-      return l;
+      return sol(k+2.);
     }
 
     float psit(float b){return acos(-2. / (rt(b) - 2.));}
