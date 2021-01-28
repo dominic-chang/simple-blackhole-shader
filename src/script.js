@@ -170,7 +170,7 @@ var scene = new THREE.Scene();
 //SCREEN
 var geometry = new THREE.PlaneGeometry(2, 2, 1);
 
-var texture = new THREE.TextureLoader().load('../static/space.png')
+var texture = new THREE.TextureLoader().load('static/space.png')
 var uniforms = {
   theta : {value: 0},
   texture1: {value:texture},
