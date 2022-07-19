@@ -46,7 +46,7 @@ const fragmentShader = () => {
       if(b*b >= 32.){
         float temp = psit(b);
         if(psi > 2.*temp){
-          return 1000.;
+          return 0.;
         } else {
           return rsB(temp - abs(temp - psi), b);
         }
@@ -110,8 +110,8 @@ const fragmentShader = () => {
 
     vec3 colorFunc(float rs, float scale){
       float ans = 0.0;
-      float rs_new = rs/scale;
-      if (rs < 2.0 || rs > 10.0){
+      float rs_new = 1.-(rs-2.)/scale;
+      if (rs <= 2.0 || rs > scale){
         ans = 0.;
       } else {
         ans = rs_new;
@@ -119,44 +119,94 @@ const fragmentShader = () => {
       return vec3(ans);
     }
 
+    vec3 colorFunc2(float rs, float x, float scale){
+      float rs_new = 1.-(rs-2.)/scale;
+      if (rs < 2.0 || rs > scale){
+        return vec3(0.0);
+      } else {
+        return vec3(cos(x), cos(x + 2.0*M_PI/3.0), cos(x - 2.0*M_PI/3.0));
+      }
+    }
+
     void main() {
-      vec2 uv = 30.0 * (gl_FragCoord.xy - 0.5*uResolution.xy) / uResolution.y; 
+      vec2 uv = 30.0 * (gl_FragCoord.xy - uResolution.xy) / uResolution.y; 
       float u = uv.x;
       float v = uv.y;
-      float rs = rsBetterborodovV2(asin(v/distance(uv,vec2(0.0))), distance(uv,vec2(0.0)), theta, 0.);
-      float rs2 = rsBetterborodovV2(asin(v/distance(uv,vec2(0.0))), distance(uv,vec2(0.0)), theta, 1.);
-      vec3 color = colorFunc(rs, 30.);
-      vec3 colorprime = colorFunc(rs2, 30.);
-      float phi = atan(uv.y/(uv.x*cos(theta)));
+      float mag = sqrt(u*u + v*v);
+      float cosvarphi = u/mag;
+      float costheta = cos(theta);
+      float sinvarphi = v/mag;
 
-      if(u < 0.){
-        if(v < 0.){
-          phi -= M_PI;
-        } else {
-          phi += M_PI;
-        }
+      if((theta > M_PI/2.0) && (theta < 3.0*M_PI/2.0)){
+        sinvarphi = -sinvarphi;
       }
+      float varphi = asin(sinvarphi);
+      float rs = rsBetterborodovV2(varphi, distance(uv,vec2(0.0)), theta, 0.);
+      float rs2 = rsBetterborodovV2(varphi, distance(uv,vec2(0.0)), theta, 1.);
+      float phi = acos(costheta*cosvarphi/sqrt(1.0-pow(sin(theta)*cosvarphi, 2.0)));
+      if(v < 0.0){phi = 2.0*M_PI - phi;}
+
+      if(theta > M_PI/2.0 && theta < 3.*M_PI/2.){
+        phi = +M_PI + phi;
+      }
+      //phi = mod(phi, 2*M_PI);
+      
+      float scale = 30.0;
+
+      vec3 color = colorFunc2(rs, phi, scale);
+      vec3 colorprime = colorFunc2(rs2, phi, scale);
+      vec3 colorrs = colorFunc(rs, scale);
+      vec3 colorrsprime = colorFunc(rs2, scale);
+
 
       
-      vec2 uv2 = (color.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
-      vec2 uv2prime = (colorprime.x)*vec2(cos(phi),sin(phi))  + vec2(0.25*uResolution.x, 0.5*uResolution.y) / uResolution.y;
+      vec2 uv2 = vec2(cos(phi), sin(phi));//  + vec2(uResolution.x, uResolution.y) / uResolution.y;
+      vec2 uv2prime = vec2(cos(phi),sin(phi));//  + vec2(uResolution.x, uResolution.y) / uResolution.y;
 
       vec4 color1 = texture2D(texture1, uv2);
       vec4 colorprime1 = texture2D(texture1, uv2prime);
-      gl_FragColor = colorprime1 + 2.*color1;//vec4(color, 1.0);
+      //gl_FragColor = abs((rs*sin(-theta)*sin(phi)+scale)/(2.*scale))*(vec4(color, 1.0) - vec4(colorprime, 0.0));
+      gl_FragColor = vec4(colorrs, 1.0) + vec4(colorrsprime, 1.0);
+      //gl_FragColor = vec4(color1, 1.0) + vec4(colorrsprime, 1.0);
+
+
     }
   `
 };
+
+
+
+
+
+		
 
 var renderer = new THREE.WebGLRenderer({
   canvas: document.getElementById('canvas'),
   antialias: true,
 });
+
 renderer.setClearColor(0x000000);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 
+onWindowResize();
+
+window.addEventListener( 'resize', onWindowResize );
+
+
+function onWindowResize() {
+
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  //mesh.material.uniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight)
+
+
+}
+
+
+
 //CAMERA
+//var camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+
 var camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
@@ -168,9 +218,9 @@ var camera = new THREE.PerspectiveCamera(
 var scene = new THREE.Scene();
 
 //SCREEN
-var geometry = new THREE.PlaneGeometry(2, 2, 1);
+var geometry = new THREE.PlaneGeometry(2, 2);
 
-var texture = new THREE.TextureLoader().load('space.png')
+var texture = new THREE.TextureLoader().load('https://blog.nature.org/science/files/2022/01/AZ_AZ160526_D300-1260x708.jpg')//.load('space.png')
 var uniforms = {
   theta : {value: 0},
   texture1: {value:texture},
@@ -192,8 +242,12 @@ scene.add(mesh);
 //RENDERER
 var theta = 0;
 function animate(){
-  theta += 0.1;
-  mesh.material.uniforms.theta.value = 3.14 * (Math.abs(Math.sin(theta)))/2.;
+  theta += 0.01;
+  theta %= 2*Math.PI
+  if (Math.abs(theta - Math.PI/2.) < 0.02 || Math.abs(theta - 3.*Math.PI/2.) < 0.02){
+    theta += 0.02
+  }
+  mesh.material.uniforms.theta.value = theta;//3.14 * (Math.abs(Math.sin(theta)))/2.;
   renderer.render(scene, camera)
   requestAnimationFrame(animate);
 }

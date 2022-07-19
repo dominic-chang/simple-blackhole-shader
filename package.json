@@ -1,14 +1,14 @@
 {
-  "name": "simple-blackhole-shader",
-  "version": "1.0.0",
-  "description": "Shader for a Swarzschild blackhole using the \'Betterborodov\' approximation",
-  "main": "script.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Dominic Chang",
-  "license": "ISC",
-  "dependencies": {
-    "three": "^0.124.0"
-  }
+    "name": "simple-blackhole-shader",
+    "version": "1.0.0",
+    "description": "Shader for a Swarzschild blackhole using the Betterborodov approximation",
+    "main": "script.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Dominic Chang",
+    "license": "ISC",
+    "dependencies": {
+        "three": "^0.124.0"
+    }
 }
