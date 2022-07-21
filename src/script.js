@@ -95,7 +95,9 @@ const fragmentShader = () => {
       float tanvarphi = tan(varphi);
       float psi = acos(-((sin(theta)*tan(varphi)) / 
             (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
-      return rsB2(M_PI*n + psi, b);
+      float rad = rsB2(M_PI*n + psi, b);
+      if(rad <= 2.){return 0.;}
+      return rad;
     }
 
     float lambda(float alpha, float theta) {
@@ -149,9 +151,8 @@ const fragmentShader = () => {
       if(theta > M_PI/2.0 && theta < 3.*M_PI/2.){
         phi = +M_PI + phi;
       }
-      //phi = mod(phi, 2*M_PI);
       
-      float scale = 30.0;
+      float scale = 15.0;
 
       vec3 color = colorFunc2(rs, phi, scale);
       vec3 colorprime = colorFunc2(rs2, phi, scale);
@@ -160,14 +161,22 @@ const fragmentShader = () => {
 
 
       
-      vec2 uv2 = vec2(cos(phi), sin(phi));//  + vec2(uResolution.x, uResolution.y) / uResolution.y;
-      vec2 uv2prime = vec2(cos(phi),sin(phi));//  + vec2(uResolution.x, uResolution.y) / uResolution.y;
+      vec2 uv2 = rs*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
+      vec2 uv2prime = rs2*vec2(cos(phi + M_PI),sin(phi + M_PI))/(2.0*scale)  + vec2(0.5, 0.5);
+      
 
       vec4 color1 = texture2D(texture1, uv2);
       vec4 colorprime1 = texture2D(texture1, uv2prime);
-      //gl_FragColor = abs((rs*sin(-theta)*sin(phi)+scale)/(2.*scale))*(vec4(color, 1.0) - vec4(colorprime, 0.0));
-      gl_FragColor = vec4(colorrs, 1.0) + vec4(colorrsprime, 1.0);
-      //gl_FragColor = vec4(color1, 1.0) + vec4(colorrsprime, 1.0);
+
+      float psi = acos(((cos(theta)) / 
+            (pow(pow(cos(theta)*sin(phi),2.0)+ pow(cos(phi),2.), .5))));
+
+      if(rs <= 2. || rs >= scale ){color1 = vec4(0.);}
+      if(rs2 <= 2. || rs2 >= scale){colorprime1 = vec4(0.);}
+
+      ////gl_FragColor = abs((rs*sin(-theta)*sin(phi)+scale)/(2.*scale))*(vec4(color, 1.0) - vec4(colorprime, 0.0));
+      //gl_FragColor = vec4(colorrs, 1.0) + vec4(colorrsprime, 1.0);
+      gl_FragColor = color1 + colorprime1;
 
 
     }
@@ -194,13 +203,7 @@ onWindowResize();
 window.addEventListener( 'resize', onWindowResize );
 
 
-function onWindowResize() {
 
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  //mesh.material.uniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight)
-
-
-}
 
 
 
@@ -220,7 +223,13 @@ var scene = new THREE.Scene();
 //SCREEN
 var geometry = new THREE.PlaneGeometry(2, 2);
 
-var texture = new THREE.TextureLoader().load('https://blog.nature.org/science/files/2022/01/AZ_AZ160526_D300-1260x708.jpg')//.load('space.png')
+var texture = new THREE.TextureLoader().load('space.png')
+//var texture = new THREE.TextureLoader().load('https://upload.wikimedia.org/wikipedia/commons/d/d3/Albert_Einstein_Head.jpg')//.load('space.png')
+//var texture = new THREE.TextureLoader().load('https://images.theconversation.com/files/393213/original/file-20210401-13-1w9xb24.jpg?ixlib=rb-1.1.0&q=30&auto=format&w=600&h=400&fit=crop&dpr=2')//https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg/1920px-The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg')//.load('space.png')
+//var texture = new THREE.TextureLoader().load('https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg/1920px-The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg')//.load('space.png')
+//var texture = new THREE.TextureLoader().load('https://cdn.vox-cdn.com/thumbor/nPHkBUDla9JcRJWRdswdAETz4MU=/0x0:1960x2000/1820x1213/filters:focal(686x574:998x886):format(webp)/cdn.vox-cdn.com/uploads/chorus_image/image/71122307/STScI_01G7PWWPY7XRR9PW95W9W8ZYZW.0.png')
+
+
 var uniforms = {
   theta : {value: 0},
   texture1: {value:texture},
@@ -238,14 +247,22 @@ var mesh = new THREE.Mesh(geometry, shader_material);
 
 mesh.position.z = -1;
 scene.add(mesh);
+function onWindowResize() {
 
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  
+  if(uniforms !=null) {
+    uniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight)
+  }
+
+}
 //RENDERER
 var theta = 0;
 function animate(){
-  theta += 0.01;
+  theta += 0.03;
   theta %= 2*Math.PI
   if (Math.abs(theta - Math.PI/2.) < 0.02 || Math.abs(theta - 3.*Math.PI/2.) < 0.02){
-    theta += 0.02
+    theta += 0.04
   }
   mesh.material.uniforms.theta.value = theta;//3.14 * (Math.abs(Math.sin(theta)))/2.;
   renderer.render(scene, camera)
