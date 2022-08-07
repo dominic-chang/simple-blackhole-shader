@@ -3,12 +3,9 @@ import * as THREE from './three.module.js';
 const vertexShader = () => {
   return `
   varying vec2 vUv;
-
     void main(){
       vUv = uv;
-      vec4 modelViewPosition = modelViewMatrix * vec4(position, 1.0);
-      gl_Position = projectionMatrix * modelViewPosition;
-
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
  ` 
 };
@@ -23,52 +20,48 @@ const fragmentShader = () => {
     float rsB(float psi, float b){
       float temp = (1. - cos(psi)) / (1. + cos(psi));
       float temp1 = b / sin(psi);
-      return pow(temp*temp + temp1*temp1, .5) - temp; 
+      return pow(pow(temp, 2.0) + pow(temp1, 2.0), .5) - temp; 
     }
 
-    float rsBeloborodov(float varphi, float b, float theta){
+    float rsBeloborodov(float sinvarphi, float cosvarphi, float b, float theta){
       float costheta = cos(theta);
-      float tanvarphi = tan(varphi);
-      float psi = acos(-((sin(theta)*tan(varphi)) / 
-            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
+      float tanvarphi = sinvarphi/abs(cosvarphi);
+      float psi = acos(-((sin(theta)*tanvarphi) / 
+            (pow(pow(costheta,2.0) + pow(tanvarphi,2.0), .5))));
       return rsB(psi, b);
     }
 
     float rt(float b){
-      float p = -b*b, q = 2.*b*b;
-      float C = pow(-q/2. + pow(q*q/4. + p*p*p/27., 0.5), 1./3.);
+      float p = -pow(b, 2.), q = 2.*b*b;
+      float C = pow(-q/2. + pow(pow(q, 2.)/4. + pow(p, 3.)/27., 0.5), 1./3.);
       return C-p/(3.*C);
     }
 
     float psit(float b){return acos(-2. / (rt(b) - 2.));}
 
     float rsB1(float psi, float b){
-      if(b*b >= 32.){
+      if(pow(b,2.) >= 32.){
         float temp = psit(b);
-        if(psi > 2.*temp){
-          return 0.;
-        } else {
-          return rsB(temp - abs(temp - psi), b);
-        }
+        return float(psi < 2.*temp)*rsB(temp - abs(temp - psi), b);
       } else {
         return rsB(psi, b);
       }
     }
 
-    float rsBetterborodov(float varphi, float b, float theta, float n){
+    float rsBetterborodov(float sinvarphi, float cosvarphi, float b, float theta, float n){
       float costheta = cos(theta);
-      float tanvarphi = tan(varphi);
-      float psi = acos(-((sin(theta)*tan(varphi)) / 
-            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
+      float tanvarphi = sinvarphi/cosvarphi;
+      float psi = acos(-((sin(theta)*tanvarphi) / 
+            (pow(pow(costheta, 2.) + pow(tanvarphi,2.), .5))));
       return rsB1(M_PI*n + psi, b);
     }
 
     float psit2(float b){
-      return 2.62761 - log(0.096394*(-24. + b * b));
+      return 2.62761 - log(0.096394*(-24. + pow(b, 2.)));
     }
 
     float rsB2(float psi, float b){
-      float tempb = b*b;
+      float tempb = pow(b, 2.);
 
       if(tempb > 32.){
         return rsB1(psi, b);
@@ -90,24 +83,14 @@ const fragmentShader = () => {
       }
     }
 
-    float rsBetterborodovV2(float varphi, float b, float theta, float n){
+    float rsBetterborodovV2(float sinvarphi, float cosvarphi, float b, float theta, float n){
       float costheta = cos(theta);
-      float tanvarphi = tan(varphi);
-      float psi = acos(-((sin(theta)*tan(varphi)) / 
-            (pow(costheta*costheta + tanvarphi*tanvarphi, .5))));
+      float tanvarphi = sinvarphi/abs(cosvarphi);
+      float psi = acos(-((sin(theta)*tanvarphi) / 
+            (pow(pow(costheta,2.) + pow(tanvarphi, 2.), .5))));
       float rad = rsB2(M_PI*n + psi, b);
       if(rad <= 2.){return 0.;}
       return rad;
-    }
-
-    float lambda(float alpha, float theta) {
-        float ans = -sin(theta) * alpha;
-        return ans;
-    }
-
-    float eta(float alpha, float beta, float theta){
-      float ans = pow(beta, 2.0) + pow(alpha*cos(theta), 2.0);
-      return ans;
     }
 
     vec3 colorFunc(float rs, float scale){
@@ -131,63 +114,43 @@ const fragmentShader = () => {
     }
 
     void main() {
-      vec2 uv = 30.0 * (gl_FragCoord.xy - uResolution.xy) / uResolution.y; 
+      vec2 uv = 30.0 * ((gl_FragCoord.xy ) / uResolution.y - vec2(0.5 - 0.5*(1.0 - uResolution.x/uResolution.y),0.5)); 
       float u = uv.x;
       float v = uv.y;
       float mag = sqrt(u*u + v*v);
       float cosvarphi = u/mag;
       float costheta = cos(theta);
-      float sinvarphi = v/mag;
+      float sinvarphi = sign(costheta)*v/mag;
 
-      if((theta > M_PI/2.0) && (theta < 3.0*M_PI/2.0)){
-        sinvarphi = -sinvarphi;
-      }
-      float varphi = asin(sinvarphi);
-      float rs = rsBetterborodovV2(varphi, distance(uv,vec2(0.0)), theta, 0.);
-      float rs2 = rsBetterborodovV2(varphi, distance(uv,vec2(0.0)), theta, 1.);
-      float phi = acos(costheta*cosvarphi/sqrt(1.0-pow(sin(theta)*cosvarphi, 2.0)));
-      if(v < 0.0){phi = 2.0*M_PI - phi;}
+      float scale = 25.0; // size of disk
+      float scale2 = 0.4; //size of horizon
 
-      if(theta > M_PI/2.0 && theta < 3.*M_PI/2.){
-        phi = +M_PI + phi;
-      }
-      
-      float scale = 15.0;
+      float rs = rsBetterborodovV2(sinvarphi, cosvarphi, distance(uv,vec2(0.0))/scale2, theta, 0.);
+      float rs2 = rsBetterborodovV2(sinvarphi, cosvarphi, distance(uv,vec2(0.0))/scale2, theta, 1.);
 
-      vec3 color = colorFunc2(rs, phi, scale);
-      vec3 colorprime = colorFunc2(rs2, phi, scale);
-      vec3 colorrs = colorFunc(rs, scale);
-      vec3 colorrsprime = colorFunc(rs2, scale);
-
-
-      
+      float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(v)) + sign(v)*acos(costheta*cosvarphi/sqrt(1.0-pow(sin(theta)*cosvarphi, 2.0)));
+     
       vec2 uv2 = rs*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
       vec2 uv2prime = rs2*vec2(cos(phi + M_PI),sin(phi + M_PI))/(2.0*scale)  + vec2(0.5, 0.5);
-      
 
-      vec4 color1 = texture2D(texture1, uv2);
-      vec4 colorprime1 = texture2D(texture1, uv2prime);
+      vec4 color1 = vec4(0.);
+      vec4 colorprime1 = vec4(0.);
+      if(rs > 2. && rs < scale){
+        color1 = texture2D(texture1, uv2);
+      }
+      if(rs2 > 2. && rs2 < scale){
+        colorprime1 = texture2D(texture1, uv2prime);
+      }
 
-      float psi = acos(((cos(theta)) / 
-            (pow(pow(cos(theta)*sin(phi),2.0)+ pow(cos(phi),2.), .5))));
-
-      if(rs <= 2. || rs >= scale ){color1 = vec4(0.);}
-      if(rs2 <= 2. || rs2 >= scale){colorprime1 = vec4(0.);}
-
-      ////gl_FragColor = abs((rs*sin(-theta)*sin(phi)+scale)/(2.*scale))*(vec4(color, 1.0) - vec4(colorprime, 0.0));
-      //gl_FragColor = vec4(colorrs, 1.0) + vec4(colorrsprime, 1.0);
-      gl_FragColor = color1 + colorprime1;
-
+      gl_FragColor = color1*2. + colorprime1;
 
     }
   `
 };
 
 
-
-
-
 		
+
 
 var renderer = new THREE.WebGLRenderer({
   canvas: document.getElementById('canvas'),
@@ -195,12 +158,12 @@ var renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setClearColor(0x000000);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
+//renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(800, 800);
 
-onWindowResize();
+//onWindowResize();
 
-window.addEventListener( 'resize', onWindowResize );
+//window.addEventListener( 'resize', onWindowResize );
 
 
 
@@ -211,8 +174,8 @@ window.addEventListener( 'resize', onWindowResize );
 //var camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 
 var camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
+  45,
+  800 / 800,
   0.1, 
   1000
 );
@@ -223,18 +186,19 @@ var scene = new THREE.Scene();
 //SCREEN
 var geometry = new THREE.PlaneGeometry(2, 2);
 
-var texture = new THREE.TextureLoader().load('static/space.png')
+//var texture = new THREE.TextureLoader().load('static/space.png')
 //var texture = new THREE.TextureLoader().load('https://upload.wikimedia.org/wikipedia/commons/d/d3/Albert_Einstein_Head.jpg')//.load('space.png')
 //var texture = new THREE.TextureLoader().load('https://images.theconversation.com/files/393213/original/file-20210401-13-1w9xb24.jpg?ixlib=rb-1.1.0&q=30&auto=format&w=600&h=400&fit=crop&dpr=2')//https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg/1920px-The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg')//.load('space.png')
 //var texture = new THREE.TextureLoader().load('https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg/1920px-The_Event_Horizon_Telescope_and_Global_mm-VLBI_Array_on_the_Earth.jpg')//.load('space.png')
-//var texture = new THREE.TextureLoader().load('https://cdn.vox-cdn.com/thumbor/nPHkBUDla9JcRJWRdswdAETz4MU=/0x0:1960x2000/1820x1213/filters:focal(686x574:998x886):format(webp)/cdn.vox-cdn.com/uploads/chorus_image/image/71122307/STScI_01G7PWWPY7XRR9PW95W9W8ZYZW.0.png')
+var texture = new THREE.TextureLoader().load('https://cdn.vox-cdn.com/thumbor/nPHkBUDla9JcRJWRdswdAETz4MU=/0x0:1960x2000/1820x1213/filters:focal(686x574:998x886):format(webp)/cdn.vox-cdn.com/uploads/chorus_image/image/71122307/STScI_01G7PWWPY7XRR9PW95W9W8ZYZW.0.png')
+//var texture = new THREE.TextureLoader().load('https://cdn-icons-png.flaticon.com/512/25/25435.png')
 
 
 var uniforms = {
   theta : {value: 0},
   texture1: {value:texture},
   uResolution: {
-    value: new THREE.Vector2(window.innerWidth, window.innerHeight),
+    value: new THREE.Vector2(800, 800),
   },
 }
 var shader_material = new THREE.ShaderMaterial({
@@ -247,17 +211,18 @@ var mesh = new THREE.Mesh(geometry, shader_material);
 
 mesh.position.z = -1;
 scene.add(mesh);
-function onWindowResize() {
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  
-  if(uniforms !=null) {
-    uniforms.uResolution.value = new THREE.Vector2(window.innerWidth, window.innerHeight)
-  }
-
-}
+//function onWindowResize(e) {
+//
+//  renderer.setSize(800, 800);
+//
+//  
+//  if(uniforms !=null) {
+//    uniforms.uResolution.value = new THREE.Vector2(800, 800)
+//  }
+//
+//}
 //RENDERER
-var theta = 0;
+var theta = 80*Math.PI/180;
 function animate(){
   theta += 0.03;
   theta %= 2*Math.PI
