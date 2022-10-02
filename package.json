@@ -9,7 +9,7 @@
     "author": "Dominic Chang",
     "license": "ISC",
     "dependencies": {
-        "stats.js": "^0.17.0",
+        "stats-js": "^1.0.1",
         "three": "^0.144.0"
     }
 }

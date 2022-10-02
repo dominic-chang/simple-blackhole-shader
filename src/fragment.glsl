@@ -1,5 +1,4 @@
 #define M_PI radians(180.)
-//3.1415926535897932384626433832795
 #define D1MACH1 1.175494351e-38
 #define D1MACH2 3.402823466e+38
 #define D1MACH3 1e-7
@@ -9,8 +8,6 @@ uniform sampler2D textureft;
 uniform vec2 uResolution;
 uniform float theta;
 varying vec2 vUv;
-
-
 
 vec2 c_p(vec2 x, vec2 y){
     return vec2(x[0]+y[0], x[1]+y[1]);
@@ -29,8 +26,6 @@ vec2 c_pow(vec2 x, float y){
     float angle = y*(atan(x[1],x[0]));
     return vec2(mag*cos(angle), mag*sin(angle));
 }
-
-
 
 float DRF(float X, float Y, float Z){
 
@@ -315,9 +310,6 @@ float rsout(float mag, float psi){
 
 }
 
-
-
-
 void main() {
     float scale = 15.0; // size of disk
     float scale2 = 40.;//size of horizon
@@ -346,8 +338,7 @@ void main() {
 
     if (mag*mag > 27.){
         rs = rsin(mag, psi);
-        rs1 = rsin(mag, M_PI+ psi);
-        //rs2 = rsin(mag, 2.*M_PI + psi);
+        rs1 = rsout(mag, M_PI+ psi);
 
 
         float deltapsi = psimax(mag) - M_PI;
@@ -355,12 +346,8 @@ void main() {
         float texcrd2rad = length(texcrd);
         float new_length = tan(atan(texcrd2rad)-deltapsi)/(texcrd2rad);
         vec2 texcrd3 = new_length*texcrd/vec2(1.,3.) + vec2(0.5, 0.5+theta/(2.*M_PI));
-        //vec2 texcrd3 = new_length*texcrd/scale + vec2(0.5, 0.5+theta;
         texcrd3 = vec2(texcrd3[0]- floor(texcrd3[0]), texcrd3[1]- floor(texcrd3[1]));
         gl_FragColor = texture2D(textureft, texcrd3);
-        //gl_FragColor = vec4(sin(deltapsi));
-
-
         
     } else {
         rs = rsin(mag, psi);
@@ -382,14 +369,4 @@ void main() {
         vec2 uv3 = rs1*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
         gl_FragColor += texture2D(texture1, uv3);
     }
-    //if (rs2 > 7.0 && rs2 < scale){
-    //    vec2 uv4 = rs2*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
-    //    gl_FragColor += texture2D(texture1, uv4);
-    //}
-
-    
-
-
-
-    //gl_FragColor = vec4(0.,0.,0.,1.);texture2D(textureft, uv);
 }
