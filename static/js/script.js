@@ -31,8 +31,8 @@ function init() {
         }
     }
 
-    loader.load('./glsl/fragment.glsl', function ( data ) {fShader =  data; runMoreIfDone(); },);
-    loader.load('./glsl/vertex.glsl', function ( data ) {vShader =  data; runMoreIfDone(); },);
+    loader.load('./static/js/glsl/fragment.glsl', function ( data ) {fShader =  data; runMoreIfDone(); },);
+    loader.load('./static/js/glsl/vertex.glsl', function ( data ) {vShader =  data; runMoreIfDone(); },);
     //loader.load('../glsl/skyfragment.glsl', function ( data ) {fSkyShader =  data; runMoreIfDone(); },);
     //loader.load('../glsl/skyvertex.glsl', function ( data ) {vSkyShader =  data; runMoreIfDone(); },);
 
