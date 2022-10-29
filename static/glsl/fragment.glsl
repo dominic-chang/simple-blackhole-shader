@@ -319,9 +319,9 @@ float rsout(float mag, float psi){
 
 
 void main() {
-    float scale = 15.0; // size of disk
-    float scale2 = 40.;//size of horizon
-    vec2 uv = 2. * scale2 * ((gl_FragCoord.xy ) / uResolution.xy - vec2(0.5 ,0.5)); 
+    float scale = 20.0; // size of disk
+    float scale2 = 100.;//size of horizon
+    vec2 uv = scale2 * ((gl_FragCoord.xy ) / uResolution.x - vec2(0.5 ,0.5*uResolution.y/uResolution.x)); 
     float x = uv.x;
     float y = uv.y;
     float mag = length(uv);
@@ -337,9 +337,7 @@ void main() {
 
     float rs = 0.0;
     float rs1 = 0.0;
-    //float rs2 = 0.0;
 
-    //gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
     float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(y)) + sign(y)*acos(costheta*cosvarphi/sqrt(1.0-pow(sin(theta)*cosvarphi, 2.0)));
     float phi2 = phi + M_PI;
 
@@ -347,19 +345,14 @@ void main() {
     if (mag*mag > 27.){
         rs = rsin(mag, psi);
         rs1 = rsin(mag, M_PI+ psi);
-        //rs2 = rsin(mag, 2.*M_PI + psi);
-
 
         float deltapsi = psimax(mag) - M_PI;
-        vec2 texcrd = (gl_FragCoord.xy/uResolution.xy - vec2(0.5, 0.5));
+        vec2 texcrd = (gl_FragCoord.xy/uResolution.x - vec2(0.5 ,0.5*uResolution.y/uResolution.x));
         float texcrd2rad = length(texcrd);
         float new_length = tan(atan(texcrd2rad)-deltapsi)/(texcrd2rad);
         vec2 texcrd3 = new_length*texcrd/vec2(1.,3.) + vec2(0.5, 0.5+theta/(2.*M_PI));
-        //vec2 texcrd3 = new_length*texcrd/scale + vec2(0.5, 0.5+theta;
         texcrd3 = vec2(texcrd3[0]- floor(texcrd3[0]), texcrd3[1]- floor(texcrd3[1]));
         gl_FragColor = texture2D(textureft, texcrd3);
-        //gl_FragColor = vec4(sin(deltapsi));
-
 
         
     } else {
@@ -373,23 +366,13 @@ void main() {
         return;
     }
     
-    if (rs > 7.0 && rs < scale) {
+    if (rs > 5.0 && rs < scale) {
         vec2 uv2 = rs*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
-        gl_FragColor = texture2D(texture1, uv2);
+        gl_FragColor = 2.0*texture2D(texture1, uv2);
 
     }
-    if (rs1 > 7.0 && rs1 < scale){
+    if (rs1 > 5.0 && rs1 < scale){
         vec2 uv3 = rs1*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
         gl_FragColor += texture2D(texture1, uv3);
     }
-    //if (rs2 > 7.0 && rs2 < scale){
-    //    vec2 uv4 = rs2*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
-    //    gl_FragColor += texture2D(texture1, uv4);
-    //}
-
-    
-
-
-
-    //gl_FragColor = vec4(0.,0.,0.,1.);texture2D(textureft, uv);
 }

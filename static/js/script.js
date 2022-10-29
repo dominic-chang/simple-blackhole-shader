@@ -12,15 +12,17 @@ function init() {
     antialias: true,
     });
     renderer.setClearColor(0x000000);
-    renderer.setSize(800, 800);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    let aspect = window.innerWidth / window.innerHeight;
 
     camera = new THREE.PerspectiveCamera(
-    40,
-    800 / 800,
+    50,
+    aspect,
     0.1, 
-    20000
+    200
     );
-
+ 
     scene = new THREE.Scene();
 
     var numFilesLeft = 2;
@@ -48,14 +50,13 @@ function more() {
     texture1:  {value:texture1},
     textureft: {value:texture2},
     uResolution: {
-        value: new THREE.Vector2(800, 800),
+        value: new THREE.Vector2(window.innerWidth, window.innerHeight),
     },
     }
     var shader_material = new THREE.ShaderMaterial({
     uniforms:       uniforms,
     vertexShader:   vShader,
     fragmentShader: fShader,
-    //blending:       THREE.AdditiveBlendMode,
     transparent:    true
     });
     var reflective_material = new THREE.MeshBasicMaterial(0xffffff);
@@ -82,7 +83,7 @@ function animate(){
     if (Math.abs(theta - Math.PI/2.) < 0.005 || Math.abs(theta - 3.*Math.PI/2.) < 0.005){
         theta += 0.01;
     }
-    acc_disk.material.uniforms.theta.value = theta;//3.14 * (Math.abs(Math.sin(theta)))/2.;
+    acc_disk.material.uniforms.theta.value = theta;// + 3.14 * (Math.abs(Math.sin(theta)))/2.;
     renderer.render(scene, camera)
     stats.end();
     requestAnimationFrame(animate);
