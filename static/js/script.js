@@ -9,7 +9,7 @@ init();
 function init() {
     renderer = new THREE.WebGLRenderer({
     canvas: document.getElementById('canvas'),
-    antialias: true,
+    antialias: false,
     });
     renderer.setClearColor(0x000000);
     renderer.setSize(window.innerWidth, window.innerHeight);
