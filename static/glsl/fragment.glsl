@@ -327,6 +327,7 @@ void main() {
     float mag = length(uv);
     float cosvarphi = x/mag;
     float costheta = cos(theta);
+    float sintheta = sin(theta);
     float sinvarphi = sign(costheta)*y/mag;
 
 
@@ -338,21 +339,39 @@ void main() {
     float rs = 0.0;
     float rs1 = 0.0;
 
-    float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(y)) + sign(y)*acos(costheta*cosvarphi/sqrt(1.0-pow(sin(theta)*cosvarphi, 2.0)));
+    float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(y)) + sign(y)*acos(costheta*cosvarphi/sqrt(1.0-pow(sintheta*cosvarphi, 2.0)));
     float phi2 = phi + M_PI;
 
+    rs = rsin(mag, psi);
+    rs1 = rsin(mag, M_PI+ psi);
+    float deltapsi = psimax(mag) - M_PI;
+    //latitude and longitude of origin
+    vec2 origin = vec2(theta, 0.0);
+    //vec2 origin = vec2(0.0, -M_PI/2.0);
+    float fov = 0.3;
+
+    vec2 screencrd = (gl_FragCoord.xy/uResolution.x - vec2(0.5 ,0.5*uResolution.y/uResolution.x))*vec2(M_PI, M_PI)*vec2(fov,fov);
+    float screenrad = length(screencrd);
+    float _lensedscreenrad = tan(atan(screenrad)-deltapsi);
+    vec2 lensedscreencrd = _lensedscreenrad*screencrd.xy/(screenrad);
+    float lensedscreenrad = length(lensedscreencrd);
+    float sinlensedscreenrad = sin(lensedscreenrad);
+    float coslensedscreenrad = cos(lensedscreenrad);
+    float lensedx = lensedscreencrd[1];
+    float lensedy = lensedscreencrd[0];
+
+    float lat = asin(coslensedscreenrad* sin(origin[1]) + (lensedy * sinlensedscreenrad * cos(origin[1])) / lensedscreenrad);
+    float lon = origin[0] + atan(lensedx*sinlensedscreenrad, lensedscreenrad*coslensedscreenrad*cos(origin[1]) - lensedy*sinlensedscreenrad*sin(origin[1]));
+    if(lon > M_PI){
+        lon = 2.0*M_PI-lon;
+    }
+    if(lon < -M_PI){
+        lon = 2.0*M_PI+lon;
+    }
+    vec2 texcrd4 = vec2((lon / M_PI + 1.) * 0.5, (lat / (M_PI/2.0) + 1.) * 0.5);
 
     if (mag*mag > 27.){
-        rs = rsin(mag, psi);
-        rs1 = rsin(mag, M_PI+ psi);
-
-        float deltapsi = psimax(mag) - M_PI;
-        vec2 texcrd = (gl_FragCoord.xy/uResolution.x - vec2(0.5 ,0.5*uResolution.y/uResolution.x));
-        float texcrd2rad = length(texcrd);
-        float new_length = tan(atan(texcrd2rad)-deltapsi)/(texcrd2rad);
-        vec2 texcrd3 = new_length*texcrd/vec2(1.,3.) + vec2(0.5, 0.5+theta/(2.*M_PI));
-        texcrd3 = vec2(texcrd3[0]- floor(texcrd3[0]), texcrd3[1]- floor(texcrd3[1]));
-        gl_FragColor = texture2D(textureft, texcrd3);
+        gl_FragColor = texture2D(textureft, texcrd4);
 
         
     } else {
