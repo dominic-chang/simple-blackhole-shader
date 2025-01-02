@@ -352,6 +352,7 @@ void main() {
 
     vec2 screencrd = (gl_FragCoord.xy/uResolution.x - vec2(0.5 ,0.5*uResolution.y/uResolution.x))*vec2(M_PI, M_PI)*vec2(fov,fov);
     float screenrad = length(screencrd);
+    // The black hole is infinitely far away so this really should be M_PI - deltapsi to be accurate
     float _lensedscreenrad = tan(atan(screenrad)-deltapsi);
     vec2 lensedscreencrd = _lensedscreenrad*screencrd.xy/(screenrad);
     float lensedscreenrad = length(lensedscreencrd);
