@@ -388,7 +388,7 @@ void main() {
     
     if (rs > 5.0 && rs < scale) {
         vec2 uv2 = rs*vec2(cos(phi),sin(phi))/(2.0*scale)  + vec2(0.5, 0.5) ;
-        gl_FragColor = 2.0*texture2D(texture1, uv2);
+        gl_FragColor += texture2D(texture1, uv2);
 
     }
     if (rs1 > 5.0 && rs1 < scale){
