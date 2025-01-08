@@ -126,7 +126,7 @@ float am(float u, float m, float tol){
     float c = sqrt(m);
     int n = 0;
     while(abs(c) > tol){
-        if(n>=10){ return 1.0/0.0;}
+        if(n>=10){ return 0.0;}
         float atemp = 0.5*(a+b);
         float btemp = sqrt(a*b); 
         float ctemp = 0.5*(a-b);
