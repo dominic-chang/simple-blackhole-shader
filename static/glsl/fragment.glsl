@@ -11,6 +11,9 @@ uniform float theta;
 varying vec2 vUv;
 
 
+float sqr(float a){
+    return a*a;
+}
 
 vec2 c_p(vec2 x, vec2 y){
     return vec2(x[0]+y[0], x[1]+y[1]);
@@ -21,11 +24,11 @@ vec2 c_m(vec2 x, vec2 y){
 }
 
 vec2 c_d(vec2 x, vec2 y){
-    return c_m(x, vec2(y[0], -y[1]))/(pow(y[0], 2.)+pow(y[1],2.));
+    return c_m(x, vec2(y[0], -y[1]))/(sqr(y[0])+sqr(y[1]));
 }
 
 vec2 c_pow(vec2 x, float y){
-    float mag = pow(sqrt(x[0]*x[0] + x[1]*x[1]), y);
+    float mag = pow(sqrt(sqr(x[0]) + sqr(x[1])), y);
     float angle = y*(atan(x[1],x[0]));
     return vec2(mag*cos(angle), mag*sin(angle));
 }
@@ -62,7 +65,7 @@ float DRF(float X, float Y, float Z){
     float YNDEV = 0.;
     float ZNDEV = 0.;
 
-    while(true){
+    for(int iter = 0; iter < 100; iter++){
         MU = (XN+YN+ZN)/3.0;
         XNDEV = 2.0 - (MU+XN)/MU;
         YNDEV = 2.0 - (MU+YN)/MU;
@@ -87,7 +90,7 @@ float DRF(float X, float Y, float Z){
 }
 
 float rawF(float sinphi, float m){
-    float sinphi2 = pow(sinphi, 2.0);
+    float sinphi2 = sqr(sinphi);
     float drf = DRF(1. - sinphi2, 1. - m*sinphi2, 1.);
     return sinphi*drf;
 }
@@ -118,7 +121,7 @@ float am(float u, float m, float tol){
     if(m1 < sqrt_tol){
         // A&S 16.15.4
         float t = tanh(u);
-        return asin(t) + 0.25*m1*(t - u*(1. - pow(t, 2.)))*cosh(u);
+        return asin(t) + 0.25*m1*(t - u*(1. - sqr(t)))*cosh(u);
     }
 
     float a = 1.;
@@ -159,7 +162,7 @@ float sn(float u, float m){
 
         float s = sin(phi);
 
-        return sqrtmu1*s/sqrt(1.-mu*pow(s,2.));
+        return sqrtmu1*s/sqrt(1.-mu*sqr(s));
 
     } else {
         float mu = 1. / m;
@@ -185,26 +188,28 @@ float cn(float u, float m){
 
         float s = sin(phi);
 
-        return cos(phi)/sqrt(1.-mu*pow(s,2.));
+        return cos(phi)/sqrt(1.-mu*sqr(s));
 
     } else {
         float mu = 1. / m;
         float v = u * sqrt(m);
         float phi = am(v, mu, D1MACH3*2.);
 
-        return sqrt(1.- mu*pow(sin(phi),2.));
+        return sqrt(1.- mu*sqr(sin(phi)));
     }
 }
 
 float rsin(float mag, float psi){
-    vec2 q = vec2(2.*mag*mag, 0.);
-    vec2 p = vec2(-mag*mag, 0.);
-    vec2 C1 = c_pow(-q/2. + c_pow(c_pow(q, 2.)/4. + c_pow(p, 3.)/27., 1./2.), 1./3.);
-    vec2 C2 = c_m(C1, vec2(-1./2., sqrt(3.)/2.));
-    vec2 C3 = c_m(C1, vec2(-1./2., -sqrt(3.)/2.));
-    vec2 v4 = C1 - c_d(p, 3.*C1);
-    vec2 v1 = C2 - c_d(p, 3.*C2);
-    vec2 v3 = C3 - c_d(p, 3.*C3);
+    float b2 = mag * mag;
+    vec2 q = vec2(b2 + b2 , 0.);
+    vec2 p = vec2(-b2, 0.);
+    vec2 C = c_pow(vec2(sqr(q[0]), 0.) / 4. + vec2(sqr(p[0] ) * p[0], 0.) / 27., 0.5);
+    vec2 C1 = c_pow(-q / 2. + C, 1. / 3.);
+    vec2 C2 = c_m(C1, vec2(-1., sqrt(3.)) / 2.);
+    vec2 C3 = c_m(C1, vec2(-1., -sqrt(3.)) / 2.);
+    vec2 v1 = C2 - c_d(p, 3. * C2);
+    vec2 v3 = C3 - c_d(p, 3. * C3);
+    vec2 v4 = C1 - c_d(p, 3. * C1);
 
     vec2 v32 = v3;
     vec2 v21 = -v1;
@@ -219,7 +224,7 @@ float rsin(float mag, float psi){
     
     float arg = sqrt(A*B)*(psi)/mag;
     if(mag*mag < 27.){
-        float ellk = (pow(A + B, 2.) - pow(v1[0], 2.)) / (4.*A*B);
+        float ellk = (sqr(A + B) - sqr(v1[0])) / (4.*A*B);
         float fo =F(acos((A-B)/(A+B)), ellk) ;
         if(arg < fo ){
             float can = cn(fo - arg, ellk);
@@ -232,7 +237,7 @@ float rsin(float mag, float psi){
         float ellk = v32[0]*v41[0] / (v31[0]*v42[0]);
         float fo = F(asin(sqrt(v31[0]/v41[0])), ellk);
         if(arg < 4.*fo ){
-            float san = v41[0]*pow(sn(fo - sqrt(v31[0]*v42[0])*psi/(2.*mag), ellk), 2.0);
+            float san = v41[0]*sqr(sn(fo - sqrt(v31[0]*v42[0])*psi/(2.*mag), ellk));
             float num = v31[0]*v4[0]-v3[0]*san;
             float den = v31[0]-san;
             return num/den;
@@ -241,14 +246,16 @@ float rsin(float mag, float psi){
 }
 
 float psimax(float mag){
-    vec2 q = vec2(2.*mag*mag, 0.);
-    vec2 p = vec2(-mag*mag, 0.);
-    vec2 C1 = c_pow(-q/2. + c_pow(c_pow(q, 2.)/4. + c_pow(p, 3.)/27., 1./2.), 1./3.);
-    vec2 C2 = c_m(C1, vec2(-1./2., sqrt(3.)/2.));
-    vec2 C3 = c_m(C1, vec2(-1./2., -sqrt(3.)/2.));
-    vec2 v4 = C1 - c_d(p, 3.*C1);
-    vec2 v1 = C2 - c_d(p, 3.*C2);
-    vec2 v3 = C3 - c_d(p, 3.*C3);
+    float b2 = mag * mag;
+    vec2 q = vec2(b2 + b2 , 0.);
+    vec2 p = vec2(-b2, 0.);
+    vec2 C = c_pow(vec2(sqr(q[0] ), 0.) / 4. + vec2(sqr(p[0]) * p[0], 0.) / 27., 0.5);
+    vec2 C1 = c_pow(-q / 2. + C, 1. / 3.);
+    vec2 C2 = c_m(C1, vec2(-1., sqrt(3.)) / 2.);
+    vec2 C3 = c_m(C1, vec2(-1., -sqrt(3.)) / 2.);
+    vec2 v1 = C2 - c_d(p, 3. * C2);
+    vec2 v3 = C3 - c_d(p, 3. * C3);
+    vec2 v4 = C1 - c_d(p, 3. * C1);
 
     vec2 v32 = v3;
     vec2 v21 = -v1;
@@ -310,7 +317,7 @@ float rsout(float mag, float psi){
 
     float ellk = min(r32*r41 / (r31*r42), 1.0);
     float fo = F(asin(sqrt(r31/r41)),ellk);
-    float san = r41 * pow(sn(fo - 1./2. * sqrt(r31*r42)*psi/(mag), ellk), 2.0);
+    float san = r41 * sqr(sn(fo - 1./2. * sqrt(r31*r42)*psi/(mag), ellk));
     return (r31*r4-r3*san) / (r31 - san) ;
 
 }
@@ -334,12 +341,12 @@ void main() {
 
     float tanvarphi = sinvarphi/abs(cosvarphi);
     float psi = acos(-((sin(theta)*tanvarphi) / 
-        (pow(pow(costheta,2.0) + pow(tanvarphi,2.0), .5))));
+        (pow(sqr(costheta) + sqr(tanvarphi), .5))));
 
     float rs = 0.0;
     float rs1 = 0.0;
 
-    float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(y)) + sign(y)*acos(costheta*cosvarphi/sqrt(1.0-pow(sintheta*cosvarphi, 2.0)));
+    float phi = M_PI/2.*(1.+sign(costheta)) + M_PI*(1.-sign(y)) + sign(y)*acos(costheta*cosvarphi/sqrt(1.0-sqr(sintheta*cosvarphi)));
     float phi2 = phi + M_PI;
 
     rs = rsin(mag, psi);
