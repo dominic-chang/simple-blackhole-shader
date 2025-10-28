@@ -57,7 +57,7 @@ float DRF(float X, float Y, float Z){
     float YNDEV = 0.;
     float ZNDEV = 0.;
 
-    while(true){
+    for(int iter = 0; iter <100; iter++){
         MU = (XN+YN+ZN)/3.0;
         XNDEV = 2.0 - (MU+XN)/MU;
         YNDEV = 2.0 - (MU+YN)/MU;
@@ -120,7 +120,10 @@ float am(float u, float m, float tol){
     float b = sqrt(m1);
     float c = sqrt(m);
     int n = 0;
-    while(abs(c) > tol){
+    for(int iter=0; iter<100;iter++){
+    if(abs(c) <= tol){
+        break;
+    }
         if(n>=10){ return 1.0/0.0;}
         float atemp = 0.5*(a+b);
         float btemp = sqrt(a*b); 
@@ -194,13 +197,12 @@ float cn(float u, float m){
 float rsin(float mag, float psi){
     vec2 q = vec2(2.*mag*mag, 0.);
     vec2 p = vec2(-mag*mag, 0.);
-    vec2 C1 = c_pow(-q/2. + c_pow(c_pow(q, 2.)/4. + c_pow(p, 3.)/27., 1./2.), 1./3.);
-    vec2 C2 = c_m(C1, vec2(-1./2., sqrt(3.)/2.));
-    vec2 C3 = c_m(C1, vec2(-1./2., -sqrt(3.)/2.));
-    vec2 v4 = C1 - c_d(p, 3.*C1);
-    vec2 v1 = C2 - c_d(p, 3.*C2);
-    vec2 v3 = C3 - c_d(p, 3.*C3);
-
+    vec2 C1 = c_pow(-q / 2. + c_pow(c_pow(q, 2.) / 4. + c_pow(p, 3.) / 27., 0.5), 1. / 3.);
+    vec2 C2 = c_m(C1, vec2(-(1. / 2.), 0.) + c_pow(vec2(-3., 0.), 1. / 2.) / 2.);
+    vec2 C3 = c_m(C1, vec2(-(1. / 2.), 0.) - c_pow(vec2(-3., 0.), 1. / 2.) / 2.);
+    vec2 v1 = C3 - c_d(p, 3. * C3);
+    vec2 v3 = C2 - c_d(p, 3. * C2);
+    vec2 v4 = C1 - c_d(p, 3. * C1);
     vec2 v32 = v3;
     vec2 v21 = -v1;
     vec2 v41 = v4 - v1;
